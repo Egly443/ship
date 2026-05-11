@@ -1,1 +1,627 @@
-{}
+{
+  "version": "0.1",
+
+  "kind": "ship_manifest",
+
+  "metadata": {
+    "generated_by": "ship",
+    "generated_at": "2026-05-11T09:00:00Z",
+    "schema_version": "2026-05",
+    "manifest_id": "ship_01JTY7J9K3P8X4",
+    "environment": "production"
+  },
+
+  "project": {
+    "name": "awesomeidea",
+    "display_name": "AwesomeIdea",
+    "region": "eu-west-2",
+    "framework": "nextjs",
+    "repository": "github.com/Egly443/awesomeidea",
+
+    "runtime": {
+      "node": "22",
+      "package_manager": "pnpm"
+    }
+  },
+
+  "identity": {
+    "root_provider": "google",
+
+    "subject": "founder@awesomeidea.ai",
+
+    "organization": {
+      "legal_name": "AwesomeIdea Ltd",
+      "domain": "awesomeidea.ai",
+      "country": "GB",
+      "jurisdiction": "England and Wales"
+    },
+
+    "billing_identity": {
+      "payer_entity": "AwesomeIdea Ltd",
+      "billing_email": "finance@awesomeidea.ai",
+      "currency": "GBP",
+
+      "tax": {
+        "vat_registered": false
+      },
+
+      "payment_method": {
+        "provider": "stripe",
+        "delegated_spending_enabled": true
+      }
+    },
+
+    "federation": {
+      "protocol": "oidc",
+
+      "session_ttl_minutes": 15,
+
+      "require_mfa": true,
+
+      "allow_account_linking": true
+    },
+
+    "delegated_authority": {
+      "broker": "ship",
+
+      "capability_model": "scoped_ephemeral_authority",
+
+      "default_scopes": [
+        "deploy:create",
+        "env:write",
+        "billing:attach",
+        "webhook:configure"
+      ],
+
+      "restricted_scopes": [
+        "dns:transfer",
+        "billing:upgrade",
+        "database:delete"
+      ],
+
+      "commercial_authority": {
+        "allow_recurring_spend": true,
+        "max_monthly_commitment_gbp": 100,
+        "human_approval_threshold_gbp": 20
+      }
+    },
+
+    "linked_accounts": {
+      "github": {
+        "required": true,
+        "username": "Egly443"
+      },
+
+      "vercel": {
+        "required": true,
+        "auto_provision": true
+      },
+
+      "stripe": {
+        "required": true,
+        "billing_owner": true
+      },
+
+      "supabase": {
+        "required": false,
+        "auto_provision": true
+      },
+
+      "cloudflare": {
+        "required": false,
+        "auto_provision": true
+      }
+    }
+  },
+
+  "provisioning": {
+    "compute": {
+      "provider": "vercel",
+
+      "plan": "pro",
+
+      "preview_deployments": true,
+
+      "edge_functions": true,
+
+      "environments": [
+        "preview",
+        "production"
+      ]
+    },
+
+    "database": {
+      "provider": "supabase",
+
+      "engine": "postgres",
+
+      "capabilities": [
+        "auth",
+        "storage",
+        "realtime",
+        "vector"
+      ],
+
+      "pooling": true,
+
+      "pitr": true,
+
+      "schema_sync": "./supabase/migrations",
+
+      "expose_raw_engine_env": false
+    },
+
+    "payments": {
+      "provider": "stripe",
+
+      "currency": "gbp",
+
+      "billing_mode": "agentic",
+
+      "agentic_funding": {
+        "enabled": true,
+
+        "settlement_model": "micropayment_stream",
+
+        "authorized_services": [
+          "vercel",
+          "supabase",
+          "resend",
+          "cloudflare"
+        ],
+
+        "spending_policy": {
+          "default_daily_limit_gbp": 25,
+          "single_transaction_limit_gbp": 5,
+          "human_approval_threshold_gbp": 20
+        },
+
+        "authorization": {
+          "protocol": "oidc_capability_grant",
+          "ephemeral_token_ttl_minutes": 15,
+          "signed_usage_claims": true,
+          "revocable": true
+        }
+      },
+
+      "products": [
+        {
+          "name": "Starter",
+          "amount": 900,
+          "interval": "month",
+          "env_key": "STRIPE_STARTER_PRICE_ID"
+        },
+
+        {
+          "name": "Pro",
+          "amount": 2900,
+          "interval": "month",
+          "env_key": "STRIPE_PRO_PRICE_ID"
+        }
+      ]
+    },
+
+    "communications": {
+      "email": {
+        "provider": "resend",
+        "from_env": "RESEND_FROM_EMAIL"
+      },
+
+      "sms": {
+        "provider": "vonage",
+        "enabled": true
+      },
+
+      "push": {
+        "provider": "webpush",
+        "vapid_enabled": true
+      }
+    },
+
+    "ai": {
+      "providers": [
+        "anthropic",
+        "openai",
+        "xai"
+      ],
+
+      "default_model_routing": {
+        "cheap_reasoning": "openai:gpt-4.1-mini",
+        "deep_reasoning": "anthropic:claude-sonnet",
+        "realtime": "xai:grok-realtime"
+      }
+    },
+
+    "networking": {
+      "domain": "awesomeidea.ai",
+
+      "dns_provider": "cloudflare",
+
+      "auto_verify": true,
+
+      "tls": true
+    },
+
+    "observability": {
+      "audit_logs": true,
+      "error_tracking": true,
+      "cron_enabled": true
+    }
+  },
+
+  "topology": {
+    "frontend": {
+      "provider": "vercel",
+
+      "runtime": "nextjs",
+
+      "depends_on": [
+        "database",
+        "payments",
+        "auth"
+      ]
+    },
+
+    "database": {
+      "provider": "supabase",
+
+      "consumed_by": [
+        "frontend",
+        "auth"
+      ]
+    },
+
+    "auth": {
+      "provider": "supabase",
+
+      "consumed_by": [
+        "frontend"
+      ]
+    },
+
+    "payments": {
+      "provider": "stripe",
+
+      "webhooks": [
+        {
+          "path": "/api/stripe/webhook",
+          "events": [
+            "checkout.session.completed",
+            "invoice.paid",
+            "customer.subscription.updated"
+          ]
+        }
+      ],
+
+      "consumed_by": [
+        "frontend"
+      ]
+    },
+
+    "email": {
+      "provider": "resend",
+
+      "consumed_by": [
+        "frontend"
+      ]
+    },
+
+    "ai": {
+      "providers": [
+        "openai",
+        "anthropic",
+        "xai"
+      ],
+
+      "consumed_by": [
+        "frontend"
+      ]
+    }
+  },
+
+  "deployment_recipes": {
+    "nextjs_supabase_stripe": {
+      "enabled": true,
+
+      "framework_adapter": "ship/nextjs-supabase-stripe",
+
+      "auto_generate": [
+        "middleware.ts",
+        "stripe_webhook_handler",
+        "auth_client",
+        "env_schema"
+      ]
+    }
+  },
+
+  "env": {
+    "public": {
+      "app": [
+        "NEXT_PUBLIC_APP_URL"
+      ],
+
+      "supabase": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+      ]
+    },
+
+    "private": {
+      "ai": [
+        "ANTHROPIC_API_KEY",
+        "OPENAI_API_KEY",
+        "XAI_API_KEY"
+      ],
+
+      "platform": [
+        "VERCEL_API_TOKEN",
+        "CRON_SECRET",
+        "ADMIN_EMAIL"
+      ],
+
+      "payments": [
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_STARTER_PRICE_ID",
+        "STRIPE_PRO_PRICE_ID"
+      ],
+
+      "email": [
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL"
+      ],
+
+      "sms": [
+        "VONAGE_API_KEY",
+        "VONAGE_API_SECRET",
+        "VONAGE_FROM_NUMBER"
+      ],
+
+      "push": [
+        "VAPID_PRIVATE_KEY"
+      ],
+
+      "database": {
+        "provider": [
+          "SUPABASE_URL",
+          "SUPABASE_ANON_KEY",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "SUPABASE_JWT_SECRET"
+        ],
+
+        "engine": {
+          "optional": [
+            "DATABASE_URL"
+          ]
+        }
+      }
+    }
+  },
+
+  "connections": [
+    {
+      "from": "openai.api_key",
+      "to": "vercel.env.OPENAI_API_KEY",
+      "scope": "production",
+      "token_type": "ephemeral_oidc"
+    },
+
+    {
+      "from": "anthropic.api_key",
+      "to": "vercel.env.ANTHROPIC_API_KEY",
+      "scope": "production",
+      "token_type": "ephemeral_oidc"
+    },
+
+    {
+      "from": "xai.api_key",
+      "to": "vercel.env.XAI_API_KEY",
+      "scope": "production",
+      "token_type": "ephemeral_oidc"
+    },
+
+    {
+      "from": "stripe.secret_key",
+      "to": "vercel.env.STRIPE_SECRET_KEY",
+      "scope": "production",
+      "token_type": "ephemeral_oidc"
+    },
+
+    {
+      "from": "stripe.webhook_secret",
+      "to": "vercel.env.STRIPE_WEBHOOK_SECRET",
+      "scope": "production",
+      "token_type": "ephemeral_oidc"
+    },
+
+    {
+      "from": "supabase.project.url",
+      "to": "vercel.env.NEXT_PUBLIC_SUPABASE_URL",
+      "scope": "all"
+    },
+
+    {
+      "from": "supabase.anon_key",
+      "to": "vercel.env.NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "scope": "all"
+    },
+
+    {
+      "from": "supabase.service_role_key",
+      "to": "vercel.env.SUPABASE_SERVICE_ROLE_KEY",
+      "scope": "production",
+      "token_type": "ephemeral_oidc"
+    },
+
+    {
+      "from": "resend.api_key",
+      "to": "vercel.env.RESEND_API_KEY",
+      "scope": "production"
+    }
+  ],
+
+  "execution": {
+    "mode": "declarative",
+
+    "reconciliation": {
+      "enabled": true,
+
+      "on_drift": "repair",
+
+      "idempotent": true
+    },
+
+    "dependency_graph": [
+      {
+        "step": "identity_federation"
+      },
+
+      {
+        "step": "billing_authorization",
+        "depends_on": [
+          "identity_federation"
+        ]
+      },
+
+      {
+        "step": "provider_account_linking",
+        "depends_on": [
+          "billing_authorization"
+        ]
+      },
+
+      {
+        "step": "database_provisioning",
+        "depends_on": [
+          "provider_account_linking"
+        ]
+      },
+
+      {
+        "step": "payment_provisioning",
+        "depends_on": [
+          "provider_account_linking"
+        ]
+      },
+
+      {
+        "step": "secret_exchange",
+        "depends_on": [
+          "database_provisioning",
+          "payment_provisioning"
+        ]
+      },
+
+      {
+        "step": "dns_configuration",
+        "depends_on": [
+          "secret_exchange"
+        ]
+      },
+
+      {
+        "step": "application_deployment",
+        "depends_on": [
+          "dns_configuration"
+        ]
+      },
+
+      {
+        "step": "smoke_tests",
+        "depends_on": [
+          "application_deployment"
+        ]
+      }
+    ],
+
+    "failure_policy": {
+      "mode": "transactional",
+
+      "on_partial_failure": "rollback_partial_resources",
+
+      "snapshot_before_mutation": true
+    }
+  },
+
+  "capabilities": {
+    "delegation_model": "scoped_ephemeral_authority",
+
+    "oidc": {
+      "enabled": true,
+
+      "issuer": "ship://authority",
+
+      "token_format": "jwt"
+    },
+
+    "agent_permissions": {
+      "default": [
+        "env:write",
+        "deploy:create",
+        "webhook:configure"
+      ],
+
+      "restricted": [
+        "dns:transfer",
+        "billing:upgrade",
+        "database:delete"
+      ]
+    },
+
+    "audit": {
+      "immutable_logs": true,
+      "execution_tracing": true,
+      "retain_days": 90
+    }
+  },
+
+  "policy": {
+    "max_monthly_burn": 100,
+
+    "approval_required": [
+      "domain_purchase",
+      "dns_transfer",
+      "plan_upgrade",
+      "production_delete",
+      "payment_routing_change"
+    ],
+
+    "secret_policy": {
+      "long_lived_tokens": false,
+
+      "rotation": "automatic",
+
+      "max_token_ttl_minutes": 15
+    },
+
+    "rollback": {
+      "enabled": true,
+
+      "snapshot_before_mutation": true
+    },
+
+    "retention_policy": "destroy_on_failure",
+
+    "audit_logging": true
+  },
+
+  "outputs": {
+    "generate": [
+      "infra.manifest.json",
+      "env.schema",
+      "rollback.snapshot",
+      "execution.trace"
+    ]
+  },
+
+  "ship": {
+    "command": "/ship",
+
+    "approval_command": "/approve",
+
+    "diff_command": "/diff",
+
+    "policy_command": "/policy"
+  }
+}
