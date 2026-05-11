@@ -11,6 +11,25 @@
     "environment": "production"
   },
 
+  "design_principles": [
+    "Federated identity: the user authenticates to each provider independently via OIDC. The orchestrator never holds master credentials.",
+    "Billing stays with the provider: Stripe, Vercel, and Supabase each bill the user directly from their own accounts. The AI vendor never intermediates revenue, payment data, or invoicing.",
+    "Delegated spend is capped and revocable: agentic_funding grants the orchestrator time-limited, amount-bounded authority to initiate spend on the user's behalf — it is not a billing proxy. Human approval is required above defined thresholds.",
+    "Secrets never transit the orchestrator: the connections model pushes secrets directly between providers via ephemeral_oidc tokens. The agent sees reference names and push status only — never secret values.",
+    "Minimal blast radius: restricted_scopes and approval_required gates prevent the agent from taking irreversible actions (dns:transfer, billing:upgrade, database:delete) without explicit human approval.",
+    "Compliance boundaries are explicit and non-negotiable: KYC, AML, and PCI-DSS requirements are surfaced to the user and owned by the provider. The agent cannot bypass or proxy them.",
+    "Every action is auditable: token issuance, API calls, secret references, and resource IDs are logged in an immutable trace the user owns.",
+    "Rollback is defined: partial failure triggers a documented teardown. Resources that cannot be auto-destroyed post-compliance-verification (e.g. Stripe accounts post-KYC) are flagged with manual steps."
+  ],
+
+  "non_goals": [
+    "Consolidating billing under an AI vendor. Each provider invoices the user directly.",
+    "Replacing provider dashboards. Ship bootstraps a baseline; ongoing management stays in each provider's UI.",
+    "Abstracting away compliance. KYC, AML, and PCI requirements are surfaced and owned by the provider.",
+    "Storing or transmitting secret values. This manifest is safe to commit. No secret values appear here or in agent context.",
+    "Provisioning environments with existing production data. Ship bootstraps clean environments only."
+  ],
+
   "project": {
     "name": "awesomeidea",
     "display_name": "AwesomeIdea",
@@ -37,6 +56,7 @@
     },
 
     "billing_identity": {
+      "_note": "Each provider bills this entity directly. The orchestrator facilitates account linking but never intermediates payment flows or holds funds.",
       "payer_entity": "AwesomeIdea Ltd",
       "billing_email": "finance@awesomeidea.ai",
       "currency": "GBP",
@@ -80,6 +100,7 @@
       ],
 
       "commercial_authority": {
+        "_note": "The agent may initiate recurring spend on the user's behalf up to these caps. This is delegated authority with human approval gates — not consolidated billing.",
         "allow_recurring_spend": true,
         "max_monthly_commitment_gbp": 100,
         "human_approval_threshold_gbp": 20
@@ -157,6 +178,22 @@
       "currency": "gbp",
 
       "billing_mode": "agentic",
+
+      "compliance": {
+        "kyc_required": true,
+        "pci_scope": "SAQ-A",
+        "user_must_acknowledge": [
+          "Stripe will perform identity verification (KYC) directly with you before live payments are enabled. The orchestrator cannot bypass or proxy this step.",
+          "Your Stripe secret key is never read by the agent. It is pushed directly to your hosting provider via a scoped ephemeral token.",
+          "PCI-DSS SAQ-A compliance is your responsibility once live. Stripe's hosted elements handle card data; your server must not.",
+          "Stripe accounts cannot be automatically deleted after KYC. If provisioning fails after this step, you must close the account manually at dashboard.stripe.com."
+        ]
+      },
+
+      "rollback_behavior": {
+        "auto_destroyable": false,
+        "manual_steps_if_not": "Visit dashboard.stripe.com → Settings → Account → Close account. This step cannot be automated post-KYC."
+      },
 
       "agentic_funding": {
         "enabled": true,
@@ -399,67 +436,71 @@
     }
   },
 
-  "connections": [
-    {
-      "from": "openai.api_key",
-      "to": "vercel.env.OPENAI_API_KEY",
-      "scope": "production",
-      "token_type": "ephemeral_oidc"
-    },
+  "connections": {
+    "_note": "Secrets are never read by the orchestrator. Each wire instructs the source provider to push the named secret directly to the destination provider's secret store via a scoped ephemeral_oidc token. The agent sees only the reference name and push status.",
 
-    {
-      "from": "anthropic.api_key",
-      "to": "vercel.env.ANTHROPIC_API_KEY",
-      "scope": "production",
-      "token_type": "ephemeral_oidc"
-    },
+    "wires": [
+      {
+        "from": "openai.api_key",
+        "to": "vercel.env.OPENAI_API_KEY",
+        "scope": "production",
+        "token_type": "ephemeral_oidc"
+      },
 
-    {
-      "from": "xai.api_key",
-      "to": "vercel.env.XAI_API_KEY",
-      "scope": "production",
-      "token_type": "ephemeral_oidc"
-    },
+      {
+        "from": "anthropic.api_key",
+        "to": "vercel.env.ANTHROPIC_API_KEY",
+        "scope": "production",
+        "token_type": "ephemeral_oidc"
+      },
 
-    {
-      "from": "stripe.secret_key",
-      "to": "vercel.env.STRIPE_SECRET_KEY",
-      "scope": "production",
-      "token_type": "ephemeral_oidc"
-    },
+      {
+        "from": "xai.api_key",
+        "to": "vercel.env.XAI_API_KEY",
+        "scope": "production",
+        "token_type": "ephemeral_oidc"
+      },
 
-    {
-      "from": "stripe.webhook_secret",
-      "to": "vercel.env.STRIPE_WEBHOOK_SECRET",
-      "scope": "production",
-      "token_type": "ephemeral_oidc"
-    },
+      {
+        "from": "stripe.secret_key",
+        "to": "vercel.env.STRIPE_SECRET_KEY",
+        "scope": "production",
+        "token_type": "ephemeral_oidc"
+      },
 
-    {
-      "from": "supabase.project.url",
-      "to": "vercel.env.NEXT_PUBLIC_SUPABASE_URL",
-      "scope": "all"
-    },
+      {
+        "from": "stripe.webhook_secret",
+        "to": "vercel.env.STRIPE_WEBHOOK_SECRET",
+        "scope": "production",
+        "token_type": "ephemeral_oidc"
+      },
 
-    {
-      "from": "supabase.anon_key",
-      "to": "vercel.env.NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      "scope": "all"
-    },
+      {
+        "from": "supabase.project.url",
+        "to": "vercel.env.NEXT_PUBLIC_SUPABASE_URL",
+        "scope": "all"
+      },
 
-    {
-      "from": "supabase.service_role_key",
-      "to": "vercel.env.SUPABASE_SERVICE_ROLE_KEY",
-      "scope": "production",
-      "token_type": "ephemeral_oidc"
-    },
+      {
+        "from": "supabase.anon_key",
+        "to": "vercel.env.NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "scope": "all"
+      },
 
-    {
-      "from": "resend.api_key",
-      "to": "vercel.env.RESEND_API_KEY",
-      "scope": "production"
-    }
-  ],
+      {
+        "from": "supabase.service_role_key",
+        "to": "vercel.env.SUPABASE_SERVICE_ROLE_KEY",
+        "scope": "production",
+        "token_type": "ephemeral_oidc"
+      },
+
+      {
+        "from": "resend.api_key",
+        "to": "vercel.env.RESEND_API_KEY",
+        "scope": "production"
+      }
+    ]
+  },
 
   "execution": {
     "mode": "declarative",
@@ -492,16 +533,24 @@
       },
 
       {
-        "step": "database_provisioning",
+        "step": "compliance_acknowledgement",
         "depends_on": [
           "provider_account_linking"
+        ],
+        "_note": "User must review and confirm all compliance items (KYC, PCI, DNS delegation) before any provisioning begins. This step cannot be skipped."
+      },
+
+      {
+        "step": "database_provisioning",
+        "depends_on": [
+          "compliance_acknowledgement"
         ]
       },
 
       {
         "step": "payment_provisioning",
         "depends_on": [
-          "provider_account_linking"
+          "compliance_acknowledgement"
         ]
       },
 
@@ -598,7 +647,15 @@
     "rollback": {
       "enabled": true,
 
-      "snapshot_before_mutation": true
+      "snapshot_before_mutation": true,
+
+      "exceptions": [
+        {
+          "service": "stripe",
+          "reason": "Stripe accounts cannot be automatically deleted after KYC/AML verification has been initiated. Manual closure required at dashboard.stripe.com.",
+          "auto_destroyable": false
+        }
+      ]
     },
 
     "retention_policy": "destroy_on_failure",
@@ -623,5 +680,70 @@
     "diff_command": "/diff",
 
     "policy_command": "/policy"
+  },
+
+  "protocol": {
+    "version": "ship/0.1",
+
+    "description": "Providers claiming Ship Protocol compatibility must implement these endpoints. The standard is governed by an open working group — no single vendor controls it.",
+
+    "well_known_url": "https://<provider-api>/.well-known/ship-protocol.json",
+
+    "required_endpoints": [
+      {
+        "method": "POST",
+        "path": "/mcp/authorize",
+        "description": "Accepts the agent's OIDC token, presents an OAuth2 PKCE consent screen directly to the user (not proxied through the agent), and returns a scoped Delegation Token.",
+        "response_fields": ["delegation_token", "granted_scopes", "expires_at", "revocation_endpoint"]
+      },
+
+      {
+        "method": "POST",
+        "path": "/mcp/provision",
+        "description": "Provisions the declared resource. Idempotent — a second call with the same session_id and resource spec must not create a duplicate.",
+        "auth": "Delegation Token (Bearer)",
+        "response_fields": ["resource_id", "status", "outputs"]
+      },
+
+      {
+        "method": "POST",
+        "path": "/mcp/secret-push",
+        "description": "Instructs this provider to push a named secret reference to a destination provider's /mcp/secret-receive over mTLS. The agent is not in the data path.",
+        "auth": "Delegation Token (Bearer)"
+      },
+
+      {
+        "method": "POST",
+        "path": "/mcp/secret-receive",
+        "description": "Receives secret values from a source provider and writes them to this provider's secret store. Accepts only inter-provider tokens scoped to this session.",
+        "auth": "Inter-provider token (mTLS + Bearer)"
+      },
+
+      {
+        "method": "POST",
+        "path": "/mcp/rollback",
+        "description": "Destroys all resources provisioned under this session_id. Idempotent. Returns a list of destroyed resources and any skipped with reasons.",
+        "auth": "Delegation Token (Bearer)"
+      },
+
+      {
+        "method": "GET",
+        "path": "/mcp/audit-stream",
+        "description": "Streams audit events for this session as newline-delimited JSON. The user — not the agent — controls retention and export.",
+        "auth": "Delegation Token (Bearer, audit-read scope)"
+      }
+    ],
+
+    "coordination_model": {
+      "governance": "Ship Protocol Working Group (modelled on OpenID Foundation). No single vendor controls the standard.",
+
+      "incentives": {
+        "Vercel": "Developers arrive with a configured project rather than an empty dashboard. Reduced activation drop-off.",
+        "Supabase": "Agent-driven provisioning reduces time-to-first-query. Higher activation rate.",
+        "Stripe": "Faster path from account creation to first test payment. Stripe retains full KYC gate and direct billing relationship.",
+        "Anthropic_and_agent_vendors": "A more capable agent is a more valuable agent. Each new provider that joins compounds the /ship capability.",
+        "Founders": "Hours of dashboard-hopping replaced by a single guided session. No secret copy-paste risk from day one."
+      }
+    }
   }
 }
