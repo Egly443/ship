@@ -32,7 +32,7 @@ What if a founder could type `/ship`, answer a handful of questions, and walk aw
 
 Not a wrapper around Terraform. Not a hosted service that owns your billing. Not a proprietary lock-in play.
 
-An **open protocol** that lets any AI agent — Claude, Cursor, Copilot, anything — orchestrate provisioning across any compliant provider, using each provider's own identity system, billing infrastructure, and compliance controls.
+An **open protocol** that lets any AI agent — Claude, Codex, Cursor, Copilot, anything — orchestrate provisioning across any compliant provider, using each provider's own identity system, billing infrastructure, and compliance controls.
 
 The agent orchestrates. The providers execute. The user retains sovereignty over every account, every invoice, and every secret.
 
