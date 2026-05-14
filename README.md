@@ -32,9 +32,11 @@ What if a founder could type `/ship`, answer a handful of questions, and walk aw
 
 Not a wrapper around Terraform. Not a hosted service that owns your billing. Not a proprietary lock-in play.
 
-An **open protocol** that lets any AI agent — Claude, Cursor, Copilot, anything — orchestrate provisioning across any compliant provider, using each provider's own identity system, billing infrastructure, and compliance controls.
+An **open protocol** that lets any AI agent — Claude, Codex, Cursor, Copilot, anything — orchestrate provisioning across any compliant provider, using each provider's own identity system, billing infrastructure, and compliance controls.
 
 The agent orchestrates. The providers execute. The user retains sovereignty over every account, every invoice, and every secret.
+
+This proposal is designed to be submitted to Anthropic's [Model Context Protocol](https://modelcontextprotocol.io) specification as a formal MCP extension. MCP is the open protocol Anthropic publishes and maintains for agent-tool communication — it already defines how agents talk to services. Ship extends it with a provisioning and secret-exchange contract that infrastructure providers can implement natively. The coordination path is: one spec owner (Anthropic/MCP), three reference implementors (Stripe, Vercel, Supabase), and a test suite that certifies compliance. No separate standards body required.
 
 ---
 
@@ -201,15 +203,17 @@ The full spec is in [`ship.json`](./ship.json).
 
 ## What providers need to implement
 
-Ship Protocol is an open standard. Any provider can implement it independently. There is no central registry to join, no SDK to install, no revenue share to negotiate.
+Ship is proposed as an extension to the [Model Context Protocol](https://modelcontextprotocol.io) — the open standard Anthropic publishes for agent-to-tool communication. MCP already defines how an agent discovers and calls tools. Ship adds a provisioning and secret-exchange layer on top of it.
 
-A provider declares compatibility by hosting a discovery document:
+A provider that implements Ship is, in MCP terms, an **MCP server** that exposes a standard set of provisioning tools. Any MCP-compatible agent can then call those tools without provider-specific integration work.
+
+A provider declares compatibility via MCP's existing well-known discovery mechanism:
 
 ```
-GET https://api.yourprovider.com/.well-known/ship-protocol.json
+GET https://api.yourprovider.com/.well-known/mcp.json
 ```
 
-And implementing six endpoints under `/mcp/v1/`:
+And registers six capabilities under the `ship/v1` MCP namespace:
 
 | Endpoint | Purpose |
 |---|---|
@@ -285,11 +289,17 @@ The inter-provider token authorising this call is issued during the authorizatio
 
 ## Governance
 
-Ship Protocol is not owned by any single vendor.
+**MCP is owned by Anthropic.** The Model Context Protocol specification is maintained at [modelcontextprotocol.io](https://modelcontextprotocol.io) and the [modelcontextprotocol GitHub org](https://github.com/modelcontextprotocol). This is the right home for Ship.
 
-The intent is to establish a **Ship Protocol Working Group**, modelled on the OpenID Foundation: an open body that ratifies the endpoint contract, maintains a compatibility test suite, and runs a public registry of certified providers. No revenue share. No gatekeeping. Any provider that passes the test suite is listed.
+Rather than create a new standards body, the proposal is:
 
-The strawman spec lives in [`ship.json`](./ship.json). Pull requests are open.
+1. **Submit Ship as a formal MCP extension** to the `modelcontextprotocol` spec repository — the same process used for other MCP capability extensions.
+2. **Recruit three reference implementors** — Stripe, Vercel, and Supabase — to build and ship the six endpoints. Each retains full control of their implementation; the spec only defines the interface contract.
+3. **Anthropic publishes a compliance test suite** alongside the extension. Any provider that passes is listed in the MCP registry as Ship-compatible. No working group votes, no membership fees, no gatekeeping.
+
+This framing changes the coordination problem entirely. Instead of convincing four companies to co-found a new organisation, it becomes: convince Anthropic to accept one extension PR, then convince three providers to implement six endpoints they already have the infrastructure for. Each of those providers already has a relationship with Anthropic via the MCP ecosystem.
+
+The strawman spec lives in [`ship.json`](./ship.json). The right next step is a PR against [github.com/modelcontextprotocol/specification](https://github.com/modelcontextprotocol/specification).
 
 ---
 
@@ -297,17 +307,18 @@ The strawman spec lives in [`ship.json`](./ship.json). Pull requests are open.
 
 This is a draft proposal — `v0.1`, `status: draft`. The spec in `ship.json` is a starting point for conversation, not a finished standard.
 
-The questions that need working group input:
+The open questions that need resolution in the MCP extension PR:
 
-- How should inter-provider token trust be bootstrapped? (mutual TLS certificate pinning, or a shared OIDC federation?)
+- How should inter-provider token trust be bootstrapped? (mutual TLS certificate pinning, or a shared OIDC federation via MCP's existing identity model?)
 - What is the right revocation model when a session times out mid-provision?
-- How should providers handle the `compliance_acknowledgement` step for regions with different KYC requirements (UK, EU, US)?
-- Should the audit stream be standardised as a schema, or left to providers?
+- How should providers signal the `compliance_acknowledgement` step for regions with different KYC requirements (UK, EU, US)?
+- Should the audit stream event schema be standardised in the extension, or left as a provider implementation detail?
+- How does Ship interact with MCP's existing tool-call authorization model — extension on top, or replacement?
 
-If you work at Vercel, Supabase, Stripe, Cloudflare, Resend, or any provider a startup needs on day one — this is an invitation. The spec is short. The endpoint contract is six endpoints. The value to your activation funnel is real.
+If you work at Vercel, Supabase, Stripe, Cloudflare, Resend, or Anthropic — this is an invitation. The spec is short. The endpoint contract is six tools. The right venue is a PR against the MCP specification repo.
 
 The goal is a world where the hardest part of starting a company is the idea, not the infrastructure.
 
 ---
 
-*Ship Protocol v0.1 · [ship.json](./ship.json)*
+*Ship Protocol v0.1 · [ship.json](./ship.json) · Proposed MCP extension for [modelcontextprotocol/specification](https://github.com/modelcontextprotocol/specification)*
