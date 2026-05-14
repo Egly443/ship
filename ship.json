@@ -599,7 +599,9 @@
     "oidc": {
       "enabled": true,
 
-      "issuer": "ship://authority",
+      "issuer": "https://claude.ai",
+
+      "_note": "The issuer is the MCP-compatible agent identity. In production this would be the agent vendor's OIDC discovery endpoint (e.g. Anthropic's for Claude). Providers verify the agent's identity against this issuer before issuing a Delegation Token.",
 
       "token_format": "jwt"
     },
@@ -685,9 +687,16 @@
   "protocol": {
     "version": "ship/0.1",
 
-    "description": "Providers claiming Ship Protocol compatibility must implement these endpoints. The standard is governed by an open working group — no single vendor controls it.",
+    "mcp_extension": {
+      "status": "proposed",
+      "target_repo": "https://github.com/modelcontextprotocol/specification",
+      "description": "Ship is proposed as a formal extension to the Model Context Protocol, owned and maintained by Anthropic. Providers implement Ship as MCP servers exposing the ship/v1 tool namespace. Any MCP-compatible agent can then orchestrate provisioning without provider-specific integration.",
+      "namespace": "ship/v1"
+    },
 
-    "well_known_url": "https://<provider-api>/.well-known/ship-protocol.json",
+    "description": "Providers implement Ship as an MCP server extension. Compatibility is declared via MCP's existing well-known discovery mechanism and verified against the Ship compliance test suite published alongside the extension spec.",
+
+    "well_known_url": "https://<provider-api>/.well-known/mcp.json",
 
     "required_endpoints": [
       {
@@ -735,7 +744,7 @@
     ],
 
     "coordination_model": {
-      "governance": "Ship Protocol Working Group (modelled on OpenID Foundation). No single vendor controls the standard.",
+      "governance": "Ship is proposed as an extension to the Model Context Protocol, owned by Anthropic. The path to adoption: (1) submit extension PR to modelcontextprotocol/specification, (2) Anthropic publishes compliance test suite, (3) Stripe, Vercel, and Supabase implement six MCP server endpoints as reference implementors, (4) any provider that passes the test suite is listed in the MCP registry as Ship-compatible. No new standards body required.",
 
       "incentives": {
         "Vercel": "Developers arrive with a configured project rather than an empty dashboard. Reduced activation drop-off.",
